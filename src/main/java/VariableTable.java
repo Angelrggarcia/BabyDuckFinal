@@ -22,7 +22,6 @@ public class VariableTable {
     public void addVariable(String name, String type, String scopeType) {
         scopes.peek().put(name, type);
         String realScope = scopeType == null ? "global" : scopeType;
-        // No dupliques memoria si ya existe (por ejemplo para parámetros)
         if (memory.get(name) == null) {
             int addr = memory.allocate(realScope, type);
             memory.set(name, addr);

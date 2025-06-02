@@ -1,7 +1,15 @@
+int fib(int n) {
+    if (n <= 1) {
+        return n;
+    } else {
+        return fib(n-1) + fib(n-2);
+    }
+}
+
 int main() {
-    int a = 1;
-    int b = 2;
-    bool res = a + b == 3 && a < b;
-    print(res);   // true
+    for (int i = 1; i <= 10; i = i + 1) {
+        int result = fib(i);
+        print(result, " ");
+    }
     return 0;
 }

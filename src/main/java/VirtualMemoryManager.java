@@ -71,14 +71,11 @@ public class VirtualMemoryManager {
         } else {
             int addr = allocate("const", type);
             symbolTable.put(key, addr);
-            // Quitar comillas si es string
-            if (type.equals("string") && value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
-                value = value.substring(1, value.length() - 1);
-            }
             constantValues.put(addr, parseValue(value, type));
             return addr;
         }
     }
+
 
     public void set(String symbol, int addr) {
         symbolTable.put(symbol, addr);
@@ -86,32 +83,6 @@ public class VirtualMemoryManager {
 
     public Integer get(String symbol) {
         return symbolTable.get(symbol);
-    }
-
-    public void resetLocalMemory() {
-        for (String key : segments.keySet()) {
-            if (key.startsWith("local") || key.startsWith("temp")) {
-                segments.get(key).reset();
-            }
-        }
-    }
-
-    // Ayuda a obtener la dirección virtual o regresar la constante/valor si aplica
-    public String getOperandAddress(String operand, VirtualMemoryManager vmm) {
-        if (operand == null || operand.equals("")) return "";
-        // Si es un número (constante literal numérica)
-        if (operand.matches("\\d+")) return operand;
-
-        // Si está en el symbolTable (variables, temporales, parámetros, retornos)
-        Integer addr = vmm.get(operand);
-        if (addr != null) return addr.toString();
-
-        // Si es un temporal como t0, t1, etc. (ya deberían estar en symbolTable cuando se crean)
-        // Si es una constante que ya tiene dirección
-        // Si operand es, por ejemplo, fib_ret y no lo tienes, deberías agregarlo como variable en el symbolTable al crear la función.
-
-        // Si no está, lo regresa tal cual (podría ser error)
-        return operand;
     }
 
 }

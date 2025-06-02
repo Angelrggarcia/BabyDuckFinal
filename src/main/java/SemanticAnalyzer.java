@@ -5,7 +5,6 @@ import java.util.Stack;
 
 public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
 
-    // Declare instance variables for all components
     private final VariableTable variableTable;
     private final FunctionDirectory functionDirectory;
     private final SemanticCube semanticCube;
@@ -28,12 +27,12 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         if (functionReturnTypeStack.isEmpty()) {
             throw new RuntimeException("No function is currently being analyzed.");
         }
-        return functionReturnTypeStack.peek();  // Get the return type of the current function
+        return functionReturnTypeStack.peek();
     }
 
     public static class ExprResult {
-        public String value; // nombre: puede ser literal, variable, temporal
-        public String type;  // tipo: int, float, bool, etc.
+        public String value;
+        public String type;
 
         public ExprResult(String value, String type) {
             this.value = value;
@@ -48,35 +47,31 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
     // -----------------------------------------Program-------------------------------------------------
     @Override
     public Object visitProgram(miniCppParser.ProgramContext ctx) {
-        // 1. Procesa primero todas las declaraciones de variables globales
+        // Procesa primero todas las declaraciones de variables globales
         for (miniCppParser.VarDeclContext varDecl : ctx.varDecl()) {
             visit(varDecl);
         }
-
-        // 2. Luego, genera cuádruplo de GOTO a main (reservar espacio, se rellenará después)
+        // Luego, genera cuádruplo de GOTO a main (reservar espacio, se rellenará después)
         int gotoMainQuad = quadGen.addQuadruple("GOTO", "", "", "");
 
-        // 3. Analiza todas las funciones (para llenar el FunctionDirectory y saber la dirección de main)
+        // Analiza todas las funciones (para llenar el FunctionDirectory y saber la dirección de main)
         for (miniCppParser.FunctionDeclContext functionDecl : ctx.functionDecl()) {
             visit(functionDecl);
         }
 
-        // 4. Obtiene el índice real de main en los cuádruplos
+        // Obtiene el índice real de main en los cuádruplos
         Integer mainIndex = quadGen.getFunctionDirectory().get("main");
         if (mainIndex == null) {
             throw new RuntimeException("No se encontró función 'main'.");
         }
 
-        // 5. Rellena el cuádruplo GOTO para apuntar al inicio de main
+        // Rellena el cuádruplo GOTO para apuntar al inicio de main
         quadGen.getQuadruples().get(gotoMainQuad).setResult(mainIndex.toString());
 
-        // 6. Procesa statements sueltos, si tu lenguaje lo permite
+        // Procesa statements sueltos
         for (miniCppParser.StatementContext statement : ctx.statement()) {
             visit(statement);
         }
-
-        System.out.println("VirtualMemoryManager de SemanticAnalyzer: " + System.identityHashCode(virtualMemoryManager));
-        System.out.println("VirtualMemoryManager de QuadrupleGenerator: " + System.identityHashCode(quadGen.getMemoryManager()));
 
         return null;
     }
@@ -89,7 +84,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
             throw new RuntimeException("Function '" + functionName + "' is not defined.");
         }
 
-        // Get function info
+        // Obtener informacion de las funciones
         FunctionDirectory.FunctionInfo functionInfo = functionDirectory.getFunction(functionName);
 
         // Evalúa y chequea argumentos
@@ -108,7 +103,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         // Chequeo de tipos y generación de PARAM
         for (int i = 0; i < args.size(); i++) {
             String paramType = functionInfo.paramTypes.get(i);
-            String paramName = functionInfo.paramNames.get(i);  // <-- usa el nombre real
+            String paramName = functionInfo.paramNames.get(i);
             if (!args.get(i).type.equals(paramType)) {
                 throw new RuntimeException("Argument type mismatch at position " + (i + 1) + " for function '" +
                         functionName + "'. Expected '" + paramType + "', found '" + args.get(i).type + "'.");
@@ -141,7 +136,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         // Usa el nombre actual de la función para saber a dónde retornar
         String functionName = functionNameStack.isEmpty() ? null : functionNameStack.peek();
 
-        // Si la función es void, puedes poner RETURN sin destino
+        // Si la funcion es void, se retorna vacio
         if (functionName != null && !"void".equals(returnType)) {
             quadGen.addQuadruple("RETURN", exprRes.value, "", functionName + "_ret");
         } else {
@@ -161,7 +156,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         String returnType = ctx.type().getText();
         String functionName = ctx.ID().getText();
 
-        // Prepare parameter types and names
+        // Lista de parametros Tipos y nombres
         List<String> paramTypes = new ArrayList<>();
         List<String> paramNames = new ArrayList<>();
 
@@ -188,14 +183,12 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         // --------- Agrega variable virtual para el return de la función -----------
         String returnVarName = functionName + "_ret";
         // En visitFunctionDecl, al crear la variable de retorno:
-        int retAddr = virtualMemoryManager.allocate("local", returnType); // <-- LOCAL, no global
+        int retAddr = virtualMemoryManager.allocate("local", returnType);
         virtualMemoryManager.set(returnVarName, retAddr);
         variableTable.addVariable(returnVarName, returnType, "local");
 
-        // --- LÍNEA CLAVE: Guarda el índice actual de cuádruplo donde inicia la función ---
         quadGen.addFunctionStart(functionName, quadGen.getQuadruples().size());
 
-        // New scope for variables
         variableTable.enterScope(functionName);
 
         // Agrega los parámetros como variables locales Y les asigna dirección virtual
@@ -206,25 +199,25 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         }
 
         // Analiza el cuerpo de la función
-        functionNameStack.push(functionName);   // <---- PUSH
+        functionNameStack.push(functionName);
         functionReturnTypeStack.push(returnType);
         visit(ctx.body());
         functionReturnTypeStack.pop();
-        functionNameStack.pop();                // <---- POP
+        functionNameStack.pop();
         variableTable.exitScope();
         return null;
     }
 
     private Object addParam(miniCppParser.ParamContext ctx, List<String> paramTypes, List<String> paramNames) {
-        String paramType = ctx.type().getText();  // Get the parameter's type
-        String paramName = ctx.ID().getText();    // Get the parameter's name
+        String paramType = ctx.type().getText();
+        String paramName = ctx.ID().getText();
 
-        // Check if the parameter has already been declared in the function's scope
+        // Se checa si el parametro ya existe dentro de la funcion
         if (paramNames.contains(paramName)) {
             throw new RuntimeException("Parameter '" + paramName + "' already declared.");
         }
 
-        // Add parameter type and name to the lists
+        // Añade el tipo y nombre de los parametros
         paramTypes.add(paramType);
         paramNames.add(paramName);
 
@@ -243,17 +236,13 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
             throw new RuntimeException("Variable '" + varName + "' already declared.");
         }
 
-        // --- DETERMINA SCOPE ACTUAL ---
-        // Aquí puedes tener una variable booleana o método, por ejemplo:
-        // boolean isGlobalScope = (functionReturnTypeStack.isEmpty());
-        // O mejor, mantén un flag de scope actual en tu SemanticAnalyzer.
         String scope = functionReturnTypeStack.isEmpty() ? "global" : "local";
 
         // --- ASIGNA DIRECCIÓN VIRTUAL ---
         int addr = virtualMemoryManager.allocate(scope, varType);
         virtualMemoryManager.set(varName, addr);
 
-        // --- AGREGA VARIABLE A LA TABLA DE VARIABLES LOGICA (opcional, si sigues usando variableTable) ---
+        // --- AGREGA VARIABLE A LA TABLA DE VARIABLES LOGICA ---
         variableTable.addVariable(varName, varType, scope);
 
         if (ctx.expr() != null) {
@@ -263,9 +252,8 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
             if (resultType.equals("error")) {
                 throw new RuntimeException("Incompatible types in initialization of '" + varName + "' (" + varType + " = " + exprRes.type + ")");
             }
-            // Puedes agregar el cuádruplo de asignación (inicialización) aquí si quieres
-            // quadGen.addQuadruple("=", exprRes.value, "", varName); // o mejor, con direcciones
-            quadGen.addQuadruple("=", exprRes.value, "", varName); // exprRes.value ya debe ser nombre temporal/constante
+
+            quadGen.addQuadruple("=", exprRes.value, "", varName);
         }
 
         return null;
@@ -274,14 +262,14 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
     //----------------------------------- Asignacion -----------------------------------------------------------
     @Override
     public Object visitAssignment(miniCppParser.AssignmentContext ctx) {
-        String varName = ctx.lhs().ID().getText();      // nombre de variable a la izquierda
-        String varType = variableTable.getType(varName); // tipo declarado de la variable
+        String varName = ctx.lhs().ID().getText();
+        String varType = variableTable.getType(varName);
 
         if (varType == null) {
             throw new RuntimeException("Variable '" + varName + "' not declared.");
         }
 
-        ExprResult exprRes = (ExprResult) visit(ctx.expr());  // valor y tipo de la expresión derecha
+        ExprResult exprRes = (ExprResult) visit(ctx.expr());
 
         // Chequeo de tipos
         String resultType = semanticCube.get(varType, "=", exprRes.type);
@@ -289,16 +277,14 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
             throw new RuntimeException("Incompatible types in assignment: '" + varType + "' = '" + exprRes.type + "'");
         }
 
-        // --- Aquí es donde asocias nombre->dirección ---
+        // Aquí es donde se asocia nombre con la direccion
         Integer addrLeft = virtualMemoryManager.get(varName);
         if (addrLeft == null) {
             throw new RuntimeException("No virtual address found for variable '" + varName + "'");
         }
 
-        // El lado derecho puede ser una constante, variable, o temporal; su value es el nombre/constante
-        String rightOperand = exprRes.value; // Usualmente lo dejas así, la impresión de cuádruplo hará la traducción
+        String rightOperand = exprRes.value;
 
-        // Puedes guardar el cuádruplo con nombres (mejor práctica), y luego traducir a direcciones en la impresión
         quadGen.addQuadruple("=", rightOperand, "", varName);
 
         return null;
@@ -374,7 +360,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         String temp = quadGen.newTemp();
         quadGen.addQuadruple(op, left.value, right.value, temp);
         variableTable.addVariable(temp, resultType, "temp");
-        return new ExprResult(temp, resultType); // resultType será "bool"
+        return new ExprResult(temp, resultType);
     }
 
     @Override
@@ -383,7 +369,6 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         ExprResult right = (ExprResult) visit(ctx.expr(1));
         String op = ctx.op.getText();
 
-        // Ensure both expressions are boolean
         if (!left.type.equals("bool") || !right.type.equals("bool")) {
             throw new RuntimeException("Both operands must be boolean for logical AND: '" + left.type + "' && '" + right.type + "'");
         }
@@ -438,7 +423,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
         // Visita el cuerpo del if
         visit(ctx.statement(0));
 
-        if (ctx.statement(1) != null) { // Hay else
+        if (ctx.statement(1) != null) { // Checa si hay else
             // Genera GOTO para saltar fuera del else
             int gotoEndIfElse = quadGen.addQuadruple("GOTO", "", "", ""); // también pendiente
 
@@ -487,7 +472,6 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
 
     @Override
     public Object visitForStatement(miniCppParser.ForStatementContext ctx) {
-        // Inicialización (ejemplo: int i = 0;)
         visit(ctx.init);
 
         // Marca el inicio de la condición
@@ -499,7 +483,7 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
             throw new RuntimeException("Condition of 'for' statement must be boolean, but found '" + cond.type + "'");
         }
 
-        // Cuádruplo GOTOF (pendiente de destino)
+        // Cuádruplo GOTOF
         int gotofIndex = quadGen.addQuadruple("GOTOF", cond != null ? cond.value : "", "", "");
 
         // Cuerpo del for
@@ -531,7 +515,6 @@ public class SemanticAnalyzer extends miniCppBaseVisitor<Object> {
 
     @Override
     public Object visitInputExpr(miniCppParser.InputExprContext ctx) {
-        // Puedes modelar input como un temporal, si lo usas en expresiones
         String temp = quadGen.newTemp();
         quadGen.addQuadruple("INPUT", "", "", temp);
         variableTable.addVariable(temp, "string", "temp");

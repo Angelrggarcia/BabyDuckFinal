@@ -37,11 +37,9 @@ public class VirtualMachine {
     private void setValue(String sAddr, Object val) {
         int addr = Integer.parseInt(sAddr);
 
-        // Si la dirección es de float pero el valor es Integer, conviértelo a Double
         if (isFloat(addr)) {
             if (val instanceof Integer) val = ((Integer) val).doubleValue();
             if (val instanceof String) val = Double.parseDouble((String) val);
-            // Puedes forzar a Double en vez de Float para operaciones más seguras.
         }
 
         if (isGlobal(addr)) globalMemory.put(addr, val);
@@ -52,7 +50,6 @@ public class VirtualMachine {
     }
 
 
-    // Define los rangos de tus segmentos según tus convenciones
     private boolean isGlobal(int addr)    { return addr >= 1000 && addr < 5000; }
     private boolean isLocal(int addr)     { return addr >= 5000 && addr < 9000; }
     private boolean isTemp(int addr)      { return addr >= 9000 && addr < 13000; }
@@ -62,7 +59,7 @@ public class VirtualMachine {
         // Inicializa la memoria global y las constantes
         globalMemory.putAll(constantMemory);
 
-        // Inicializa el stack para main (un contexto inicial, aunque main no es función)
+        // Inicializa el stack para main
         localMemoryStack.push(new HashMap<>());
         tempMemoryStack.push(new HashMap<>());
 
@@ -82,7 +79,6 @@ public class VirtualMachine {
                             throw new RuntimeException("Operación inválida con strings: " + q.operator);
                         }
                     } else {
-                        // El código de números (como antes)
                         Number left = toNumber(leftVal);
                         Number right = toNumber(rightVal);
                         Object res;
@@ -171,18 +167,25 @@ public class VirtualMachine {
                 case "PRINT": {
                     Object val = getValue(q.leftOperand);
                     if (val instanceof Integer) {
-                        System.out.println((Integer) val);
+                        System.out.print((Integer) val);
                     } else if (val instanceof Float) {
-                        System.out.println(String.format("%.7f", (Float) val).replaceAll("\\.?0+$", "")); // Opcional: quita ceros extra
+                        System.out.print(String.format("%.7f", (Float) val).replaceAll("\\.?0+$", ""));
                     } else if (val instanceof Double) {
-                        System.out.println(String.format("%.7f", (Double) val).replaceAll("\\.?0+$", "")); // Opcional: quita ceros extra
+                        System.out.print(String.format("%.7f", (Double) val).replaceAll("\\.?0+$", ""));
+                    } else if (val instanceof String) {
+                        String s = (String) val;
+                        // Remover comillas al inicio y al final si existen
+                        if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
+                            s = s.substring(1, s.length() - 1);
+                        }
+                        System.out.print(s);
                     } else {
-                        System.out.println(val);
+                        System.out.print(val);
                     }
                     break;
                 }
+
                 case "PARAM":
-                    // Guarda en staging area, será copiado a locals al hacer GOSUB
                     paramStaging.put(Integer.parseInt(q.result), getValue(q.leftOperand));
                     break;
                 case "GOSUB":
@@ -201,26 +204,20 @@ public class VirtualMachine {
                 case "RETURN":
                     // Si hay valor de retorno y result
                     if (q.leftOperand != null && !q.leftOperand.isBlank() && q.result != null && !q.result.isBlank()) {
-                        Object retVal = getValue(q.leftOperand); // lee desde local actual
-                        setValue(q.result, retVal);              // escribe en local actual
+                        Object retVal = getValue(q.leftOperand);
+                        setValue(q.result, retVal);
                     }
 
-                    // --- COPIA EL RETORNO ANTES DE HACER POP ---
                     if (!returnIpStack.isEmpty()) {
-                        // COPIA el valor de retorno al contexto anterior (debajo en el stack)
                         int retAddr = Integer.parseInt(q.result);
                         Object retVal = localMemoryStack.peek().get(retAddr);
-                        // Sale de este contexto, entra al anterior
                         localMemoryStack.pop();
                         tempMemoryStack.pop();
-                        // Copia el valor al slot de retorno en el nuevo tope
                         if (!localMemoryStack.isEmpty())
                             localMemoryStack.peek().put(retAddr, retVal);
-                        // Regresa
                         ip = returnIpStack.pop();
                         continue;
                     } else {
-                        // main terminó
                         return;
                     }
                 case "GOTO":
@@ -259,7 +256,6 @@ public class VirtualMachine {
     }
 
     private boolean isFloat(int addr) {
-        // Rango de floats locales, globales y temporales
         return (addr >= 2000 && addr < 3000)     // global_float
                 || (addr >= 6000 && addr < 7000)    // local_float
                 || (addr >= 10000 && addr < 11000)  // temp_float

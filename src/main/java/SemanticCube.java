@@ -61,7 +61,6 @@ public class SemanticCube {
 
         // Asignación con coerción implícita permitida
         add("float", "=", "int", "ok");
-        add("int", "=", "string", "ok");
         add("float", "=", "string", "ok");
         add("string", "=", "int", "ok");
         add("string", "=", "float", "ok");

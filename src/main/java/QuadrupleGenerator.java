@@ -1,9 +1,6 @@
 import java.util.*;
 
 public class QuadrupleGenerator {
-    public Stack<String> operands = new Stack<>();
-    public Stack<String> types = new Stack<>();
-    public Stack<String> operators = new Stack<>();
     public List<Quadruple> quadruples = new ArrayList<>();
     private int tempCounter = 0;
 
@@ -21,39 +18,10 @@ public class QuadrupleGenerator {
         return functionDirectory;
     }
 
-    public Map<Integer, Object> getConstantValues() {
-        Map<Integer, Object> constants = new HashMap<>();
-
-        for (Map.Entry<String, Integer> entry : memory.getSymbolTable().entrySet()) {
-            String key = entry.getKey();
-            Integer addr = entry.getValue();
-
-            // key tiene formato "valor:tipo"
-            if (key.contains(":")) {
-                String[] parts = key.split(":");
-                String value = parts[0];
-                String type = parts[1];
-
-                Object parsed;
-                switch (type) {
-                    case "int" -> parsed = Integer.parseInt(value);
-                    case "float" -> parsed = Float.parseFloat(value);
-                    case "bool" -> parsed = value.equals("true") || value.equals("1");
-                    case "string" -> parsed = value;
-                    default -> throw new RuntimeException("Tipo de constante no reconocido: " + type);
-                }
-
-                constants.put(addr, parsed);
-            }
-        }
-
-        return constants;
-    }
-
     public QuadrupleGenerator(FunctionDirectory funcDir, VariableTable variableTable, VirtualMemoryManager memory) {
         this.funcDir = funcDir;
         this.variableTable = variableTable;
-        this.memory = memory; // <--- ¡usa la misma instancia!
+        this.memory = memory;
     }
 
 
@@ -64,7 +32,7 @@ public class QuadrupleGenerator {
     public int addQuadruple(String op, String left, String right, String res) {
         Quadruple q = new Quadruple(op, left, right, res);
         quadruples.add(q);
-        return quadruples.size() - 1; // Retorna el índice donde lo agregó
+        return quadruples.size() - 1;
     }
 
     public void printQuadruples() {
@@ -80,7 +48,6 @@ public class QuadrupleGenerator {
         for (int i = 0; i < quadruples.size(); i++) {
             Quadruple q = quadruples.get(i);
 
-            // Para saltos, imprime el result como está (índice de cuadruplo)
             if (q.operator.equals("GOTO") || q.operator.equals("GOTOF") || q.operator.equals("GOSUB")) {
                 System.out.printf(
                         "%02d: (%s, %s, %s, %s)%n",
@@ -113,13 +80,13 @@ public class QuadrupleGenerator {
         if ("true".equals(symbol) || "false".equals(symbol)) return String.valueOf(mem.getOrAddConstant(symbol, "bool"));
         if (symbol.startsWith("\"")) return String.valueOf(mem.getOrAddConstant(symbol, "string"));
 
-        // Busca en la tabla de símbolos (variables, parámetros, temporales, returns)
+        // Busca en la tabla de símbolos
         Integer addr = mem.get(symbol);
         if (addr != null) return String.valueOf(addr);
 
-        // Si es un temporal no registrado (poco probable porque ya los registras)
+        // Si es un temporal no registrado
         if (symbol.matches("t[0-9]+")) {
-            // Busca el tipo en la variableTable si es necesario
+
             String type = variableTable.getType(symbol);
             if (type == null) type = "int";
             int tAddr = mem.allocate("temp", type);
@@ -127,10 +94,8 @@ public class QuadrupleGenerator {
             return String.valueOf(tAddr);
         }
 
-        // Si es una función, se deja tal cual (por si tu GOSUB lo requiere como nombre)
         if (isFunctionName(symbol)) return symbol;
 
-        // Si llegó aquí, probablemente es error
         throw new RuntimeException("No virtual address found for symbol: '" + symbol + "'");
     }
 
@@ -155,9 +120,8 @@ public class QuadrupleGenerator {
             String right = translate(quad.rightOperand);
             String result;
 
-            // ¡NO traduzcas result para saltos!
             if (quad.operator.equals("GOTO") || quad.operator.equals("GOTOF") || quad.operator.equals("GOSUB")) {
-                result = quad.result; // debe ser el índice de cuádruplo
+                result = quad.result;
             } else {
                 result = translate(quad.result);
             }
@@ -176,7 +140,7 @@ public class QuadrupleGenerator {
             return String.valueOf(memory.getOrAddConstant(operand, "bool"));
         }
 
-        // Si es nombre de función...
+        // Si es nombre de función
         if (funcDir.getFunction(operand) != null) {
             return operand;
         }
