@@ -3,6 +3,8 @@ import org.antlr.v4.runtime.tree.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
@@ -32,13 +34,27 @@ public class Main {
             // 7. Perform semantic analysis by visiting the AST
             semanticAnalyzer.visit(tree);
 
+            System.out.println("--- SymbolTable justo antes de imprimir cuádruplos ---");
+            System.out.println(semanticAnalyzer.getQuadrupleGenerator().getMemoryManager().getSymbolTable());
+
             // 8. Print quadruples (if you added generation)
-            if (semanticAnalyzer.getQuadrupleGenerator() != null) {
-                semanticAnalyzer.getQuadrupleGenerator().printQuadruples();
-            }
+            semanticAnalyzer.getQuadrupleGenerator().printQuadruples();
+            semanticAnalyzer.getQuadrupleGenerator().printQuadruplesWithAddresses();
 
             // 9. If no exception is thrown, the code is semantically correct
             System.out.println("Semantic analysis completed successfully.");
+
+            // 10. Ejecuta los cuádruplos usando la máquina virtual
+            List<Quadruple> quads = semanticAnalyzer.getQuadrupleGenerator().getQuadruplesWithVirtualAddresses();
+            Map<Integer, Object> consts = semanticAnalyzer.getQuadrupleGenerator().getMemoryManager().getConstantValues();
+            Map<String, Integer> funcDirectory = semanticAnalyzer.getQuadrupleGenerator().getFunctionDirectory();
+
+
+            VirtualMachine vm = new VirtualMachine(quads, consts, funcDirectory);
+            System.out.println("--- Ejecutando el programa en la máquina virtual ---");
+            vm.execute();
+
+
         } catch (IOException e) {
             // Handle file read errors
             System.err.println("Error reading the input file: " + e.getMessage());
@@ -46,5 +62,6 @@ public class Main {
             // Handle other errors (e.g., semantic errors)
             System.err.println("Semantic error: " + e.getMessage());
         }
+
     }
 }

@@ -92,4 +92,23 @@ public class VirtualMemoryManager {
             }
         }
     }
+
+    // Ayuda a obtener la dirección virtual o regresar la constante/valor si aplica
+    public String getOperandAddress(String operand, VirtualMemoryManager vmm) {
+        if (operand == null || operand.equals("")) return "";
+        // Si es un número (constante literal numérica)
+        if (operand.matches("\\d+")) return operand;
+
+        // Si está en el symbolTable (variables, temporales, parámetros, retornos)
+        Integer addr = vmm.get(operand);
+        if (addr != null) return addr.toString();
+
+        // Si es un temporal como t0, t1, etc. (ya deberían estar en symbolTable cuando se crean)
+        // Si es una constante que ya tiene dirección
+        // Si operand es, por ejemplo, fib_ret y no lo tienes, deberías agregarlo como variable en el symbolTable al crear la función.
+
+        // Si no está, lo regresa tal cual (podría ser error)
+        return operand;
+    }
+
 }

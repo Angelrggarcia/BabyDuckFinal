@@ -1,15 +1,13 @@
-int n = 7;
-
-int fib(int k) {
-    if (k <= 1) {
-        return k;
-    } else {
-        return fib(k - 1) + fib(k - 2);
-    }
-}
-
 int main() {
-    int result = fib(n);
-    print(result);
+    int a = 10;
+    int b = 3;
+    int suma = a + b;
+    int resta = a - b;
+    int mult = a * b;
+    int div = a / b;
+    print(suma);   // 13
+    print(resta);  // 7
+    print(mult);   // 30
+    print(div);    // 3
     return 0;
 }

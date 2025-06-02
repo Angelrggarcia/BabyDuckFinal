@@ -1,195 +1,219 @@
 import java.util.*;
 
 public class VirtualMachine {
-/*    private final List<Quadruple> quadruples;
-    private int ip = 0; // Instruction pointer
-    private final Scanner scanner = new Scanner(System.in);
+    private final List<Quadruple> quadruples;
     private final Map<Integer, Object> globalMemory = new HashMap<>();
+    private final Map<Integer, Object> constantMemory;
     private final Stack<Map<Integer, Object>> localMemoryStack = new Stack<>();
-    private final Stack<Integer> returnAddressStack = new Stack<>();
-    private Map<Integer, Object> currentMemory = globalMemory;
-    private final VirtualMemoryManager memoryManager;
-    private final Map<String, Integer> functionDirectory = new HashMap<>();
+    private final Stack<Map<Integer, Object>> tempMemoryStack = new Stack<>();
+    private final Stack<Integer> returnIpStack = new Stack<>();
+    private final Map<Integer, Object> paramStaging = new HashMap<>(); // área de paso de parámetros
 
-    public VirtualMachine(List<Quadruple> quads, Map<String, Integer> funcDir, Map<Integer, Object> constantValues, VirtualMemoryManager memoryManager) {
-        this.quadruples = quads;
-        this.memoryManager = memoryManager;
-        this.functionDirectory.putAll(funcDir);
-        globalMemory.putAll(constantValues);
+    private int ip = 0;
+
+    private final Map<String, Integer> funcDir;
+
+    public VirtualMachine(List<Quadruple> quadruples, Map<Integer, Object> constantValues, Map<String, Integer> funcDir) {
+        this.quadruples = quadruples;
+        this.constantMemory = constantValues;
+        this.funcDir = funcDir;
     }
 
-    public void run() {
+    private int buscarInicioFuncion(String funcName) {
+        Integer idx = funcDir.get(funcName);
+        if (idx == null) throw new RuntimeException("No se encontró la función: " + funcName);
+        return idx;
+    }
+
+    private Object getValue(String sAddr) {
+        if (sAddr == null || sAddr.isBlank()) return null;
+        int addr = Integer.parseInt(sAddr);
+        if (isConstant(addr)) return constantMemory.get(addr);
+        if (isGlobal(addr)) return globalMemory.get(addr);
+        if (isLocal(addr)) return localMemoryStack.peek().get(addr);
+        if (isTemp(addr)) return tempMemoryStack.peek().get(addr);
+        throw new RuntimeException("Dirección desconocida: " + addr);
+    }
+    private void setValue(String sAddr, Object val) {
+        int addr = Integer.parseInt(sAddr);
+        if (isGlobal(addr)) globalMemory.put(addr, val);
+        else if (isConstant(addr)) throw new RuntimeException("No se puede escribir en memoria constante");
+        else if (isLocal(addr)) localMemoryStack.peek().put(addr, val);
+        else if (isTemp(addr)) tempMemoryStack.peek().put(addr, val);
+        else throw new RuntimeException("Dirección desconocida: " + addr);
+    }
+
+    // Define los rangos de tus segmentos según tus convenciones
+    private boolean isGlobal(int addr)    { return addr >= 1000 && addr < 5000; }
+    private boolean isLocal(int addr)     { return addr >= 5000 && addr < 9000; }
+    private boolean isTemp(int addr)      { return addr >= 9000 && addr < 13000; }
+    private boolean isConstant(int addr)  { return addr >= 13000 && addr < 17000; }
+
+    public void execute() {
+        // Inicializa la memoria global y las constantes
+        globalMemory.putAll(constantMemory);
+
+        // Inicializa el stack para main (un contexto inicial, aunque main no es función)
+        localMemoryStack.push(new HashMap<>());
+        tempMemoryStack.push(new HashMap<>());
+
         while (ip < quadruples.size()) {
-            Quadruple quad = quadruples.get(ip);
-            String op = quad.operator;
-            int next = ip + 1;
+            Quadruple q = quadruples.get(ip);
 
-            switch (op) {
-                case "+" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) + toNumber(getValue(quad.rightOperand)));
-                case "-" -> {
-                    Object left = getValue(quad.leftOperand);
-                    Object right = getValue(quad.rightOperand);
-                    double result = toNumber(left) - toNumber(right);
-                    System.out.printf("[RESTA] %s (%s) - %s (%s) = %s\n", quad.leftOperand, left, quad.rightOperand, right, result);
-                    setValue(quad.result, result);
+            switch (q.operator) {
+                case "+":
+                case "-":
+                case "*":
+                case "/": {
+                    Number left = toNumber(getValue(q.leftOperand));
+                    Number right = toNumber(getValue(q.rightOperand));
+                    Object res = null;
+                    switch (q.operator) {
+                        case "+": res = (left instanceof Double || right instanceof Double)
+                                ? left.doubleValue() + right.doubleValue()
+                                : left.intValue() + right.intValue();
+                            break;
+                        case "-": res = (left instanceof Double || right instanceof Double)
+                                ? left.doubleValue() - right.doubleValue()
+                                : left.intValue() - right.intValue();
+                            break;
+                        case "*": res = (left instanceof Double || right instanceof Double)
+                                ? left.doubleValue() * right.doubleValue()
+                                : left.intValue() * right.intValue();
+                            break;
+                        case "/": res = (left instanceof Double || right instanceof Double)
+                                ? left.doubleValue() / right.doubleValue()
+                                : left.intValue() / right.intValue();
+                            break;
+                    }
+                    setValue(q.result, res);
+                    break;
                 }
-                case "*" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) * toNumber(getValue(quad.rightOperand)));
-                case "/" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) / toNumber(getValue(quad.rightOperand)));
-
-                case "=" -> setValue(quad.result, getValue(quad.leftOperand));
-
-                case "==" -> setValue(quad.result,
-                        getValue(quad.leftOperand).equals(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case "!=" -> setValue(quad.result,
-                        !getValue(quad.leftOperand).equals(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case "<" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) < toNumber(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case "<=" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) <= toNumber(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case ">" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) > toNumber(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case ">=" -> setValue(quad.result,
-                        toNumber(getValue(quad.leftOperand)) >= toNumber(getValue(quad.rightOperand)) ? 1 : 0);
-
-                case "&&" -> {
-                    boolean a = toBool(getValue(quad.leftOperand));
-                    boolean b = toBool(getValue(quad.rightOperand));
-                    setValue(quad.result, (a && b) ? 1 : 0);
+                case "<=":
+                case ">=":
+                case "<":
+                case ">":
+                case "==":
+                case "!=": {
+                    Number left = toNumber(getValue(q.leftOperand));
+                    Number right = toNumber(getValue(q.rightOperand));
+                    boolean res = false;
+                    switch (q.operator) {
+                        case "<=": res = left.doubleValue() <= right.doubleValue(); break;
+                        case ">=": res = left.doubleValue() >= right.doubleValue(); break;
+                        case "<":  res = left.doubleValue() < right.doubleValue(); break;
+                        case ">":  res = left.doubleValue() > right.doubleValue(); break;
+                        case "==": res = left.doubleValue() == right.doubleValue(); break;
+                        case "!=": res = left.doubleValue() != right.doubleValue(); break;
+                    }
+                    setValue(q.result, res);
+                    break;
                 }
-
-                case "||" -> {
-                    boolean a = toBool(getValue(quad.leftOperand));
-                    boolean b = toBool(getValue(quad.rightOperand));
-                    setValue(quad.result, (a || b) ? 1 : 0);
+                case "&&":
+                case "||": {
+                    boolean left = toBool(getValue(q.leftOperand));
+                    boolean right = toBool(getValue(q.rightOperand));
+                    boolean res = false;
+                    switch (q.operator) {
+                        case "&&": res = left && right; break;
+                        case "||": res = left || right; break;
+                    }
+                    setValue(q.result, res);
+                    break;
                 }
-
-                case "!" -> {
-                    boolean val = toBool(getValue(quad.leftOperand));
-                    setValue(quad.result, !val ? 1 : 0);
+                case "!": {
+                    boolean val = toBool(getValue(q.leftOperand));
+                    setValue(q.result, !val);
+                    break;
                 }
-
-                case "PRINT" -> System.out.println(getValue(quad.leftOperand));
-
-                case "READ" -> {
-                    System.out.print("> ");
-                    String input = scanner.nextLine();
-                    setValue(quad.result, tryParse(input));
-                }
-
-                case "GOTO" -> next = toInt(quad.result);
-
-                case "GOTOF" -> {
-                    boolean cond = toBool(getValue(quad.leftOperand));
-                    if (!cond) next = toInt(quad.result);
-                }
-
-                case "PARAM" -> {
-                    int dest = toInt(quad.result);
-                    Object val = getValue(quad.leftOperand);
-                    currentMemory.put(dest, val);
-                    System.out.printf("[PARAM] Copiando %s a %d\n", val, dest);
-                }
-
-                case "ERA" -> {
-                    currentMemory = new HashMap<>();
-                }
-
-                case "RETURN" -> {
-                    int retAddr = toInt(quad.result);
-                    Object value = getValue(quad.leftOperand);
-
-                    globalMemory.put(retAddr, value); // Siempre guardar en global
-                    System.out.printf("[RETURN] guardando %s en %d\n", value, retAddr);
-                }
-
-                case "ENDFUNC" -> {
-                    if (!localMemoryStack.isEmpty()) {
-                        currentMemory = localMemoryStack.pop();
-                    } else {
-                        currentMemory = globalMemory;
+                case "=":
+                    setValue(q.result, getValue(q.leftOperand));
+                    break;
+                case "PRINT":
+                    System.out.println(getValue(q.leftOperand));
+                    break;
+                case "PARAM":
+                    // Guarda en staging area, será copiado a locals al hacer GOSUB
+                    paramStaging.put(Integer.parseInt(q.result), getValue(q.leftOperand));
+                    break;
+                case "GOSUB":
+                    // Guarda return IP
+                    returnIpStack.push(ip + 1);
+                    // Nuevas memorias locales/temporales
+                    localMemoryStack.push(new HashMap<>());
+                    tempMemoryStack.push(new HashMap<>());
+                    // Copia parámetros a memoria local nueva
+                    for (Map.Entry<Integer, Object> e : paramStaging.entrySet())
+                        localMemoryStack.peek().put(e.getKey(), e.getValue());
+                    paramStaging.clear();
+                    // Salta al inicio de función (busca en tu directorio de funciones)
+                    ip = buscarInicioFuncion(q.leftOperand);
+                    continue;
+                case "RETURN":
+                    // Si hay valor de retorno y result
+                    if (q.leftOperand != null && !q.leftOperand.isBlank() && q.result != null && !q.result.isBlank()) {
+                        Object retVal = getValue(q.leftOperand); // lee desde local actual
+                        setValue(q.result, retVal);              // escribe en local actual
                     }
 
-                    if (!returnAddressStack.isEmpty()) {
-                        ip = returnAddressStack.pop();
+                    // --- COPIA EL RETORNO ANTES DE HACER POP ---
+                    if (!returnIpStack.isEmpty()) {
+                        // COPIA el valor de retorno al contexto anterior (debajo en el stack)
+                        int retAddr = Integer.parseInt(q.result);
+                        Object retVal = localMemoryStack.peek().get(retAddr);
+                        // Sale de este contexto, entra al anterior
+                        localMemoryStack.pop();
+                        tempMemoryStack.pop();
+                        // Copia el valor al slot de retorno en el nuevo tope
+                        if (!localMemoryStack.isEmpty())
+                            localMemoryStack.peek().put(retAddr, retVal);
+                        // Regresa
+                        ip = returnIpStack.pop();
+                        continue;
                     } else {
-                        break;
+                        // main terminó
+                        return;
                     }
+                case "GOTO":
+                    ip = Integer.parseInt(q.result);
                     continue;
-                }
-
-                case "GOSUB" -> {
-                    localMemoryStack.push(currentMemory);
-                    returnAddressStack.push(ip + 1);
-                    ip = functionDirectory.get(quad.leftOperand);
-                    continue;
-                }
-
-                default -> throw new RuntimeException("Operación no soportada: " + op);
+                case "GOTOF":
+                    if (!toBool(getValue(q.leftOperand))) {
+                        ip = Integer.parseInt(q.result);
+                        continue;
+                    }
+                    break;
+                default:
+                    throw new RuntimeException("Operador no soportado: " + q.operator);
             }
-
-            ip = next;
+            ip++;
         }
     }
 
-    private Object getValue(String operand) {
-        int addr = toInt(operand);
-
-        if (currentMemory.containsKey(addr)) return currentMemory.get(addr);
-        if (!localMemoryStack.isEmpty() && localMemoryStack.peek().containsKey(addr)) {
-            return localMemoryStack.peek().get(addr);
-        }
-        if (globalMemory.containsKey(addr)) return globalMemory.get(addr);
-
-        throw new RuntimeException("Dirección no inicializada: " + addr);
-    }
-
-    private void setValue(String addrStr, Object value) {
-        int addr = toInt(addrStr);
-        currentMemory.put(addr, value);
-    }
-
-    private int toInt(String s) {
-        try {
-            return Integer.parseInt(s);
-        } catch (NumberFormatException e) {
-            Integer addr = memoryManager.get(s);
-            if (addr == null) {
-                throw new RuntimeException("No se encontró dirección para símbolo: " + s);
-            }
-            return addr;
-        }
-    }
-
-    private double toNumber(Object val) {
-        if (val instanceof Integer) return ((Integer) val).doubleValue();
-        if (val instanceof Float) return ((Float) val).doubleValue();
-        if (val instanceof Double) return (Double) val;
-        throw new RuntimeException("Valor no numérico: " + val);
-    }
-
-    private boolean toBool(Object val) {
-        if (val instanceof Boolean) return (Boolean) val;
-        if (val instanceof Integer) return ((Integer) val) != 0;
-        throw new RuntimeException("No se puede convertir a booleano: " + val);
-    }
-
-    private Object tryParse(String input) {
-        try {
-            return Integer.parseInt(input);
-        } catch (NumberFormatException e1) {
+    private Number toNumber(Object obj) {
+        if (obj instanceof Integer) return (Integer) obj;
+        if (obj instanceof Double) return (Double) obj;
+        if (obj instanceof Float) return ((Float) obj).doubleValue();
+        if (obj instanceof Boolean) return ((Boolean) obj) ? 1 : 0;
+        if (obj instanceof String) {
             try {
-                return Float.parseFloat(input);
-            } catch (NumberFormatException e2) {
-                return input;
+                return Integer.parseInt((String) obj);
+            } catch (NumberFormatException e) {
+                try {
+                    return Double.parseDouble((String) obj);
+                } catch (NumberFormatException ee) {
+                    throw new RuntimeException("No se puede convertir a número: " + obj);
+                }
             }
         }
-    } */
+        throw new RuntimeException("No se puede convertir a número: " + obj);
+    }
+
+    private boolean toBool(Object obj) {
+        if (obj instanceof Boolean) return (Boolean) obj;
+        if (obj instanceof Integer) return (Integer) obj != 0;
+        if (obj instanceof Double) return (Double) obj != 0.0;
+        if (obj instanceof String) return Boolean.parseBoolean((String) obj);
+        throw new RuntimeException("No se puede convertir a boolean: " + obj);
+    }
 }
