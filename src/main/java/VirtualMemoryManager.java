@@ -23,12 +23,11 @@ public class VirtualMemoryManager {
         return switch (type) {
             case "int" -> Integer.parseInt(value);
             case "float" -> Float.parseFloat(value);
-            case "bool" -> value.equals("1") || value.equals("true");
+            case "bool" -> value.equals("1") || value.equalsIgnoreCase("true");
             case "string" -> value;
             default -> throw new RuntimeException("Tipo no soportado: " + type);
         };
     }
-
 
     private void initSegments() {
         // Global
@@ -72,7 +71,11 @@ public class VirtualMemoryManager {
         } else {
             int addr = allocate("const", type);
             symbolTable.put(key, addr);
-            constantValues.put(addr, parseValue(value, type)); // <-- guardar el valor real
+            // Quitar comillas si es string
+            if (type.equals("string") && value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+                value = value.substring(1, value.length() - 1);
+            }
+            constantValues.put(addr, parseValue(value, type));
             return addr;
         }
     }

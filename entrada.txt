@@ -1,13 +1,7 @@
 int main() {
-    int a = 10;
-    int b = 3;
-    int suma = a + b;
-    int resta = a - b;
-    int mult = a * b;
-    int div = a / b;
-    print(suma);   // 13
-    print(resta);  // 7
-    print(mult);   // 30
-    print(div);    // 3
+    int a = 1;
+    int b = 2;
+    bool res = a + b == 3 && a < b;
+    print(res);   // true
     return 0;
 }

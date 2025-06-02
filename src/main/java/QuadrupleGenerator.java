@@ -171,27 +171,32 @@ public class QuadrupleGenerator {
     private String translate(String operand) {
         if (operand == null || operand.isBlank()) return "";
 
-        // Si es nombre de una función, se deja sin traducir
+        // Si es literal booleano
+        if (operand.equals("true") || operand.equals("false")) {
+            return String.valueOf(memory.getOrAddConstant(operand, "bool"));
+        }
+
+        // Si es nombre de función...
         if (funcDir.getFunction(operand) != null) {
             return operand;
         }
-
         Integer addr = memory.get(operand);
         if (addr != null) return String.valueOf(addr);
 
+        // Si es un número entero
         if (operand.matches("-?[0-9]+")) {
             return String.valueOf(memory.getOrAddConstant(operand, "int"));
         }
-
+        // Si es un número flotante
         if (operand.matches("-?[0-9]+\\.[0-9]+")) {
             return String.valueOf(memory.getOrAddConstant(operand, "float"));
         }
-
+        // Si es string
         if (operand.startsWith("\"")) {
             return String.valueOf(memory.getOrAddConstant(operand, "string"));
         }
-
         throw new RuntimeException("Símbolo sin dirección virtual: '" + operand + "'");
     }
+
 
 }
