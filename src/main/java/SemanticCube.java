@@ -52,6 +52,33 @@ public class SemanticCube {
         // in operator (ejemplo simple con listas o strings)
         add("int", "in", "list", "bool");
         add("string", "in", "string", "bool");
+
+        // Asignación directa
+        add("int", "=", "int", "ok");
+        add("float", "=", "float", "ok");
+        add("bool", "=", "bool", "ok");
+        add("string", "=", "string", "ok");
+
+        // Asignación con coerción implícita permitida
+        add("float", "=", "int", "ok");
+        add("float", "=", "string", "ok");
+        add("string", "=", "int", "ok");
+        add("string", "=", "float", "ok");
+
+        // Relacionales entre int y float (y viceversa)
+        add("int", "==", "float", "bool");
+        add("float", "==", "int", "bool");
+        add("int", "!=", "float", "bool");
+        add("float", "!=", "int", "bool");
+        add("int", "<",  "float", "bool");
+        add("float", "<", "int", "bool");
+        add("int", "<=", "float", "bool");
+        add("float", "<=", "int", "bool");
+        add("int", ">",  "float", "bool");
+        add("float", ">", "int", "bool");
+        add("int", ">=", "float", "bool");
+        add("float", ">=", "int", "bool");
+
     }
 
     private static void add(String left, String op, String right, String result) {
