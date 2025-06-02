@@ -1,9 +1,15 @@
-int fib(int n) {
-    if (n <= 1) {
-        return n;
+int n = 7;
+
+int fib(int k) {
+    if (k <= 1) {
+        return k;
+    } else {
+        return fib(k - 1) + fib(k - 2);
     }
-    return fib(n - 1) + fib(n - 2);
 }
-for(int i = 1; i <= 5; i = i + 1;){
-    print(fib(i));
+
+int main() {
+    int result = fib(n);
+    print(result);
+    return 0;
 }

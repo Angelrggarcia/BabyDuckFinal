@@ -419,65 +419,15 @@ public interface miniCppListener extends ParseTreeListener {
 	 */
 	void exitLambdaExpr(miniCppParser.LambdaExprContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code IntLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
+	 * Enter a parse tree produced by {@link miniCppParser#literal}.
 	 * @param ctx the parse tree
 	 */
-	void enterIntLiteral(miniCppParser.IntLiteralContext ctx);
+	void enterLiteral(miniCppParser.LiteralContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code IntLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
+	 * Exit a parse tree produced by {@link miniCppParser#literal}.
 	 * @param ctx the parse tree
 	 */
-	void exitIntLiteral(miniCppParser.IntLiteralContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code FloatLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void enterFloatLiteral(miniCppParser.FloatLiteralContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code FloatLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void exitFloatLiteral(miniCppParser.FloatLiteralContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code BoolLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void enterBoolLiteral(miniCppParser.BoolLiteralContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code BoolLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void exitBoolLiteral(miniCppParser.BoolLiteralContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ListCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void enterListCallLiteral(miniCppParser.ListCallLiteralContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ListCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void exitListCallLiteral(miniCppParser.ListCallLiteralContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code DictCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void enterDictCallLiteral(miniCppParser.DictCallLiteralContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code DictCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void exitDictCallLiteral(miniCppParser.DictCallLiteralContext ctx);
+	void exitLiteral(miniCppParser.LiteralContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link miniCppParser#listLiteral}.
 	 * @param ctx the parse tree

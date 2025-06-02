@@ -1,16 +1,22 @@
 public class Quadruple {
-    public final String op, arg1, arg2, result;
+    public String operator;
+    public String leftOperand;
+    public String rightOperand;
+    public String result;
 
-    public Quadruple(String op, String arg1, String arg2, String result) {
-        this.op = op;
-        this.arg1 = arg1;
-        this.arg2 = arg2;
+    public Quadruple(String operator, String leftOperand, String rightOperand, String result) {
+        this.operator = operator;
+        this.leftOperand = leftOperand;
+        this.rightOperand = rightOperand;
         this.result = result;
     }
 
     @Override
     public String toString() {
-        return "(" + op + ", " + arg1 + ", " + arg2 + ", " + result + ")";
+        return "(" + operator + ", " + leftOperand + ", " + rightOperand + ", " + result + ")";
+    }
+
+    public void setResult(String result) {
+        this.result = result;
     }
 }
-

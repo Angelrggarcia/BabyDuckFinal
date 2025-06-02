@@ -254,40 +254,11 @@ public interface miniCppVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitLambdaExpr(miniCppParser.LambdaExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code IntLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
+	 * Visit a parse tree produced by {@link miniCppParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIntLiteral(miniCppParser.IntLiteralContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code FloatLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFloatLiteral(miniCppParser.FloatLiteralContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code BoolLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitBoolLiteral(miniCppParser.BoolLiteralContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ListCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitListCallLiteral(miniCppParser.ListCallLiteralContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code DictCallLiteral}
-	 * labeled alternative in {@link miniCppParser#literal}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitDictCallLiteral(miniCppParser.DictCallLiteralContext ctx);
+	T visitLiteral(miniCppParser.LiteralContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link miniCppParser#listLiteral}.
 	 * @param ctx the parse tree

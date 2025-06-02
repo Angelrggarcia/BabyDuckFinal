@@ -78,11 +78,12 @@ lambdaExpr: '[' paramList? ']' '->' expr;
 
 // ------------------- Literales -------------------
 literal
-    : INT        # IntLiteral
-    | FLOAT      # FloatLiteral
-    | BOOL       # BoolLiteral
-    | listLiteral # ListCallLiteral
-    | dictLiteral # DictCallLiteral
+    : INT
+    | FLOAT
+    | BOOL
+    | STRING
+    | listLiteral
+    | dictLiteral
     ;
 
 listLiteral: '[' callArgs? ']';
@@ -95,10 +96,10 @@ baseType: 'int' | 'float' | 'double' | 'bool' | 'char' | 'void' | 'string' | 'li
 genericType: '<' type (',' type)* '>';
 
 // ------------------- Tokens -------------------
+BOOL: 'true' | 'false';
 ID: [a-zA-Z_][a-zA-Z_0-9]*;
 INT: [0-9]+;
 FLOAT: [0-9]+ '.' [0-9]+;
-BOOL: 'true' | 'false';
 STRING: '"' (ESC | ~["\\\r\n])* '"';
 fragment ESC: '\\' ["\\/bfnrt];
 
